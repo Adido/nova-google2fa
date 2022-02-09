@@ -42,8 +42,8 @@ class Google2fa extends Tool
         $google2fa = new G2fa();
 
         $google2fa_url = $google2fa->getQRCodeUrl(
-            'pragmarx',
-            'google2fa@pragmarx.com',
+            config('app.name'),
+            auth()->user()->email,
             $google2fa->generateSecretKey()
         );
 
@@ -63,7 +63,7 @@ class Google2fa extends Tool
      */
     public function confirm()
     {
-        if (app(Google2FAAuthenticator::class)->isAuthenticated()) {
+        if ($this->is2FAValid()) {
             auth()->user()->user2fa->google2fa_enable = 1;
             auth()->user()->user2fa->save();
 
