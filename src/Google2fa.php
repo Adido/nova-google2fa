@@ -2,6 +2,10 @@
 
 namespace Lifeonscreen\Google2fa;
 
+use BaconQrCode\Renderer\Image\ImagickImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Laravel\Nova\Tool;
 use PragmaRX\Google2FA\Google2FA as G2fa;
 use PragmaRX\Recovery\Recovery;
@@ -19,6 +23,41 @@ class Google2fa extends Tool
     }
 
     /**
+     * @return bool
+     */
+    protected function is2FAValid()
+    {
+        $secret = Request::get('secret');
+        if (empty($secret)) {
+            return false;
+        }
+
+        $google2fa = new G2fa();
+
+        return $google2fa->verifyKey(auth()->user()->user2fa->google2fa_secret, $secret);
+    }
+
+    protected function getQRCode()
+    {
+        $google2fa = new G2fa();
+
+        $google2fa_url = $google2fa->getQRCodeUrl(
+            'pragmarx',
+            'google2fa@pragmarx.com',
+            $google2fa->generateSecretKey()
+        );
+
+        $writer = new Writer(
+            new ImageRenderer(
+                new RendererStyle(400),
+                new ImagickImageBackEnd()
+            )
+        );
+
+        return base64_encode($writer->writeString($google2fa_url));
+    }
+
+    /**
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse|\Illuminate\View\View
      * @throws \PragmaRX\Google2FA\Exceptions\InsecureCallException
      */
@@ -31,15 +70,7 @@ class Google2fa extends Tool
             return response()->redirectTo(config('nova.path'));
         }
 
-        $google2fa = new G2fa();
-
-        $google2fa_url = $google2fa->getQRCodeUrl(
-            config('app.name'),
-            auth()->user()->email,
-            auth()->user()->user2fa->google2fa_secret
-        );
-
-        $data['google2fa_url'] = $google2fa_url;
+        $data['qrcode_image'] = $this->getQRCode();
         $data['error'] = 'Secret is invalid.';
 
         return view('google2fa::register', $data);
@@ -51,18 +82,9 @@ class Google2fa extends Tool
      */
     public function register()
     {
-        $google2fa = new G2fa();
-
-        $google2fa_url = $google2fa->getQRCodeUrl(
-            config('app.name'),
-            auth()->user()->email,
-            auth()->user()->user2fa->google2fa_secret
-        );
-
-        $data['google2fa_url'] = $google2fa_url;
+        $data['qrcode_image'] = $this->getQRCode();
 
         return view('google2fa::register', $data);
-
     }
 
     private function isRecoveryValid($recover, $recoveryHashes)
@@ -113,11 +135,12 @@ class Google2fa extends Tool
 
             return response(view('google2fa::recovery', $data));
         }
+        if ($this->is2FAValid()) {
+            $authenticator = app(Google2FAAuthenticator::class);
+            $authenticator->login();
 
-        if (app(Google2FAAuthenticator::class)->isAuthenticated()) {
             return response()->redirectTo(config('nova.path'));
         }
-
         $data['error'] = 'One time password is invalid.';
 
         return view('google2fa::authenticate', $data);

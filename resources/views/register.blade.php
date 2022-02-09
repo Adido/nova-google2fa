@@ -33,7 +33,7 @@
 <div class="h-full">
     <div class="px-view py-view mx-auto">
         <div class="mx-auto py-8 max-w-sm text-center text-90">
-            @include('nova::partials.logo')
+            {{-- @include('nova::partials.logo') --}}
         </div>
 
         <form id="register_form" class="bg-white shadow rounded-lg p-8 max-w-xl mx-auto" method="POST"
@@ -53,7 +53,7 @@
                 </ol>
             </strong>
             <div class="text-center">
-                <img src="{{ $google2fa_url }}" alt="">
+                <img src="data:image/png;base64, {{ $qrcode_image }}" alt="">
             </div>
 
             <div class="text-center">
