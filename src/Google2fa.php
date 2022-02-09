@@ -66,6 +66,8 @@ class Google2fa extends Tool
         if ($this->is2FAValid()) {
             auth()->user()->user2fa->google2fa_enable = 1;
             auth()->user()->user2fa->save();
+            $authenticator = app(Google2FAAuthenticator::class);
+            $authenticator->login();
 
             return response()->redirectTo(config('nova.path'));
         }
