@@ -34,7 +34,7 @@ class Google2fa extends Tool
 
         $google2fa = new G2fa();
 
-        return $google2fa->verifyKey(auth()->user()->user2fa->google2fa_secret, $secret);
+        return $google2fa->verifyKey(auth()->user()->user2fa->google2fa_secret, $secret, 20);
     }
 
     protected function getQRCode()
